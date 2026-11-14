@@ -5,17 +5,19 @@ declare(strict_types=1);
 namespace Am2tec\SupportSdk\Tests;
 
 use Am2tec\SupportSdk\Providers\SupportServiceProvider;
+use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
     protected function getPackageProviders($app): array
     {
-        return [SupportServiceProvider::class];
+        return [LivewireServiceProvider::class, SupportServiceProvider::class];
     }
 
     protected function defineEnvironment($app): void
     {
+        $app['config']->set('app.key', 'base64:'.base64_encode(str_repeat('a', 32)));
         $app['config']->set('support.url', 'https://support.test');
         $app['config']->set('support.app_key', 'k');
         $app['config']->set('support.app_secret', 's');

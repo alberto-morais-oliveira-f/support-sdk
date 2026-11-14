@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Am2tec\SupportSdk\Providers;
 
+use Am2tec\SupportSdk\Livewire\SupportChatWidget;
 use Am2tec\SupportSdk\SupportSdk;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 
 class SupportServiceProvider extends ServiceProvider
 {
@@ -29,8 +31,16 @@ class SupportServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->loadViewsFrom(__DIR__.'/../../resources/views', 'support-sdk');
+
+        if (class_exists(Livewire::class)) {
+            Livewire::component('support-chat-widget', SupportChatWidget::class);
+        }
+
         if ($this->app->runningInConsole()) {
             $this->publishes([__DIR__.'/../../config/support.php' => config_path('support.php')], 'support-config');
+            $this->publishes([__DIR__.'/../../resources/views' => resource_path('views/vendor/support-sdk')], 'support-views');
+            $this->publishes([__DIR__.'/../../public' => public_path('vendor/support-sdk')], 'support-assets');
         }
     }
 }
