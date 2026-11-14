@@ -20,6 +20,8 @@ class SupportChatWidget extends Component
 
     public const STATE_NOTIFY = 'notify';
 
+    private const CONFIG_TIMEOUT = 3;
+
     #[Locked]
     public string $token = '';
 
@@ -53,19 +55,33 @@ class SupportChatWidget extends Component
 
     public int $pollingMs = 3000;
 
+    #[Locked]
+    public bool $configLoaded = false;
+
     public function mount(string $token, ?string $apiUrl = null, array $context = []): void
     {
         $this->token = $token;
         $this->apiUrl = (string) ($apiUrl ?: config('support.api_url') ?: config('support.url'));
         $this->context = $context;
+        // Sem chamada de rede aqui: não bloqueia a página host se a API estiver fora.
+    }
+
+    /** Config é opcional e carregada uma vez, sob demanda, com timeout curto. */
+    private function loadConfig(): void
+    {
+        if ($this->configLoaded) {
+            return;
+        }
+
+        $this->configLoaded = true;
 
         try {
-            $interval = (int) ($this->api()->config()['polling_interval_ms'] ?? 0);
+            $interval = (int) ($this->api(self::CONFIG_TIMEOUT)->config()['polling_interval_ms'] ?? 0);
             if ($interval > 0) {
                 $this->pollingMs = $interval;
             }
         } catch (SupportApiException) {
-            // config é opcional; segue com o padrão de 3s.
+            // segue com o padrão de 3s.
         }
     }
 
@@ -100,6 +116,7 @@ class SupportChatWidget extends Component
         $this->conversationId = (int) ($data['conversation']['id'] ?? 0) ?: null;
         $this->messages = array_values($data['messages'] ?? []);
         $this->state = self::STATE_CHAT;
+        $this->loadConfig();
     }
 
     public function requestCode(): void
@@ -222,8 +239,10 @@ class SupportChatWidget extends Component
         return view('support-sdk::livewire.support-chat-widget');
     }
 
-    private function api(): WidgetApi
+    private function api(?int $timeout = null): WidgetApi
     {
-        return new WidgetApi($this->apiUrl, $this->token, (int) config('support.timeout', 10));
+        $default = (int) config('support.timeout', 10);
+
+        return new WidgetApi($this->apiUrl, $this->token, $timeout !== null ? min($timeout, $default) : $default);
     }
 }

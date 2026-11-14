@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Am2tec\SupportSdk\Livewire\SupportChatWidget;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
@@ -125,3 +126,54 @@ it('does not allow tampering with the token from the client', function () {
     widget(['support.test/api/v1/conversations/open' => Http::response([], 409)])
         ->set('token', 'evil');
 })->throws(Exception::class, 'Cannot update locked property');
+
+it('does not call widget/config on mount (no network on page load)', function () {
+    Http::fake();
+
+    Livewire::test(SupportChatWidget::class, ['token' => 'tok', 'apiUrl' => 'https://support.test'])
+        ->assertSet('open', false);
+
+    Http::assertNothingSent();
+});
+
+it('loads widget/config lazily once, after chat opens', function () {
+    Http::fake([
+        'support.test/api/v1/widget/config' => Http::response(['polling_interval_ms' => 5000]),
+        'support.test/api/v1/conversations/open' => Http::response(['conversation' => ['id' => 1], 'messages' => []]),
+    ]);
+
+    $c = Livewire::test(SupportChatWidget::class, ['token' => 'tok', 'apiUrl' => 'https://support.test'])
+        ->call('toggle')->call('toggle')->call('toggle')
+        ->assertSet('pollingMs', 5000);
+
+    Http::assertSentCount(2);
+});
+
+it('skips config and shows fixed pt-BR error when API is unreachable', function () {
+    $calls = 0;
+    Http::fake(function () use (&$calls) {
+        $calls++;
+
+        throw new ConnectionException('cURL error 6: Could not resolve host: secret.internal');
+    });
+
+    Livewire::test(SupportChatWidget::class, ['token' => 'tok', 'apiUrl' => 'https://support.test'])
+        ->call('toggle')
+        ->assertSet('error', 'Não foi possível conectar ao suporte. Tente novamente.')
+        ->assertDontSee('cURL')
+        ->assertDontSee('secret.internal')
+        ->assertDontSee('unreachable');
+
+    expect($calls)->toBe(1);
+});
+
+it('shows fixed pt-BR copy on 5xx without API error, ignoring framework message', function () {
+    widget(['support.test/api/v1/conversations/open' => Http::response(['message' => 'Server Error: SQLSTATE host db1'], 500)])
+        ->call('toggle')
+        ->assertSet('error', 'Não foi possível conectar ao suporte. Tente novamente.')
+        ->assertDontSee('SQLSTATE');
+
+    widget(['support.test/api/v1/conversations/open' => Http::response('<html>Bad Gateway</html>', 502)])
+        ->call('toggle')
+        ->assertSet('error', 'Não foi possível conectar ao suporte. Tente novamente.');
+});

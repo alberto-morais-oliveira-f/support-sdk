@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Http;
  */
 class WidgetApi
 {
+    public const MSG_UNAVAILABLE = 'Não foi possível conectar ao suporte. Tente novamente.';
+
     public function __construct(
         private readonly string $baseUrl,
         private readonly string $token,
@@ -62,19 +64,31 @@ class WidgetApi
         try {
             $response = Http::acceptJson()->asJson()->withToken($this->token)->timeout($this->timeout)->{$method}($url, $data);
         } catch (ConnectionException $e) {
-            throw new SupportApiException('support_api unreachable: '.$e->getMessage());
+            // Nunca expõe detalhes de cURL/host ao usuário final.
+            report($e);
+
+            throw new SupportApiException(__(self::MSG_UNAVAILABLE));
         }
 
         if ($response->failed()) {
             $body = (array) $response->json();
-            $message = $body['error'] ?? $body['message'] ?? 'support_api request failed';
+            $status = $response->status();
+            // Em 5xx só confiamos no `error` deliberado da API; `message` costuma ser texto
+            // genérico/debug do framework (inglês, exceção, host).
+            $message = $status >= 500
+                ? ($body['error'] ?? null)
+                : ($body['error'] ?? $body['message'] ?? null);
 
             if (isset($body['errors']) && is_array($body['errors'])) {
                 $first = collect($body['errors'])->flatten()->first();
                 $message = is_string($first) ? $first : $message;
             }
 
-            throw new SupportApiException((string) $message, $response->status(), $body);
+            if (! is_string($message) || trim($message) === '') {
+                $message = __(self::MSG_UNAVAILABLE);
+            }
+
+            throw new SupportApiException($message, $status, $body);
         }
 
         return (array) $response->json();
