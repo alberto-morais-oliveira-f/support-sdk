@@ -1,0 +1,46 @@
+{
+    "name": "am2tec/support-sdk",
+    "description": "Laravel SDK for the am2tec support_api (widget token issuer + HTTP client).",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.3",
+        "illuminate/http": "^12.0|^13.0",
+        "illuminate/support": "^12.0|^13.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.0",
+        "orchestra/pest-plugin-testbench": "^3.3",
+        "orchestra/testbench": "^10.0",
+        "pestphp/pest": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Am2tec\\SupportSdk\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Am2tec\\SupportSdk\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Am2tec\\SupportSdk\\Providers\\SupportServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "scripts": {
+        "test": "@php vendor/bin/pest"
+    }
+}
