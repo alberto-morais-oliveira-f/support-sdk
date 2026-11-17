@@ -1,6 +1,16 @@
 # am2tec/support-sdk
 
+[![Packagist Version](https://img.shields.io/packagist/v/am2tec/support-sdk)](https://packagist.org/packages/am2tec/support-sdk)
+[![PHP Version](https://img.shields.io/packagist/php-v/am2tec/support-sdk)](https://packagist.org/packages/am2tec/support-sdk)
+[![License](https://img.shields.io/packagist/l/am2tec/support-sdk)](https://packagist.org/packages/am2tec/support-sdk)
+
 SDK Laravel para o `support_api` (server-side: usa `X-App-Key` / `X-App-Secret`).
+
+```bash
+composer require am2tec/support-sdk
+```
+
+Fonte canônica: `git.am2tec.com:am2tec/sdks/support-sdk`. Espelho público (Packagist): `github.com/alberto-morais-oliveira-f/support-sdk`.
 
 ```env
 SUPPORT_API_URL=https://support.am2tec.com
